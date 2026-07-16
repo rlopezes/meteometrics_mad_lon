@@ -1,0 +1,5 @@
+Resumen del proceso de limpieza
+------------------------------
+Número de registros iniciales: 268
+Número de registros borrados: 4
+Número de registros finales: 264
