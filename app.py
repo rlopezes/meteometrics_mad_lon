@@ -61,6 +61,19 @@ try:
     df_final.loc[mask_in, col_precip] = df_final.loc[mask_in, col_precip] * 25.4
     df_final.loc[mask_in, 'metrics.precipitation.unit'] = 'mm'
 
+    # 8. Enriquecimiento: Oscilación Térmica (Diferencia entre Máxima y Mínima)
+    df_final['thermal_range'] = df_final['metrics.temperature.max'] - df_final['metrics.temperature.min']
+
+    # 9. Enriquecimiento: Precipitación Acumulada Anual (Suma acumulada por ciudad y año)
+    df_final['cumulative_rain_year'] = df_final.groupby(['city', 'year'])['metrics.precipitation.avg'].cumsum()
+
+    # 10. KPI: Índice de Estrés Térmico (Combinación de calor y falta de lluvia)
+    # Se calcula como la Max / (Lluvia + 1) para evitar divisiones por cero; a mayor valor, más estrés.
+    df_final['kpi.heat_stress_index'] = df_final['metrics.temperature.max'] / (df_final['metrics.precipitation.avg'] + 1)
+
+    # 11. KPI: Anomalía Térmica (Z-score: desviación estándar respecto a la media histórica de la ciudad)
+    df_final['kpi.temp_zscore'] = df_final.groupby('city')['metrics.temperature.avg'].transform(lambda x: (x - x.mean()) / x.std())
+
     # Estadísticas finales y generación del informe
     n_final = len(df_final)
     n_borrados = n_inicial - n_final
@@ -72,8 +85,21 @@ try:
         f.write(f"Número de registros borrados: {n_borrados}\n")
         f.write(f"Número de registros finales: {n_final}\n")
 
+    # 12. Reportes Agregados finales
+    print("\n--- RESUMEN POR CIUDAD: Temperatura Media Histórica y Lluvia Total ---")
+    print(df_final.groupby('city').agg({
+        'metrics.temperature.avg': 'mean',
+        'metrics.precipitation.avg': 'sum'
+    }))
+
+    print("\n--- RESUMEN ANUAL: Temperaturas Extremas (Máxima y Mínima Absoluta) ---")
+    print(df_final.groupby(['year', 'city']).agg({
+        'metrics.temperature.max': 'max',
+        'metrics.temperature.min': 'min'
+    }))
+
     print("Proceso completado. Se ha generado 'informe_limpieza.txt'.")
-    print(df_final)
+    print(df_final.head())
 
 except requests.exceptions.RequestException as e:
     print(f'Error en la petición: {e}')
